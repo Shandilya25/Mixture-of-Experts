@@ -12,3 +12,18 @@ class MOE_Expert(nn.Module):
     
     def forward(self,x):
         return self.ll2(nn.relu(self.ll1))
+    
+class MOE(nn.Module):
+    def __init__(self,experts,features_in,features_out,hidden_dim):
+        self.expert_num=experts
+        self.experts=nn.ModuleList(
+            [
+                MOE_Expert(features_in,hidden_dim,features_out) for _ in range(experts)
+            ]
+        )
+        self.gate=nn.Linear(features_in,experts)
+    
+    def forward(self,x):
+        #x.shape=(batch,seq_len,feature_in)--> expert_weight=(batch,seq_len,experts)
+        expert_weights=self.gate(x)
+        
