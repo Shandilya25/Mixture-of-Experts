@@ -26,4 +26,11 @@ class MOE(nn.Module):
     def forward(self,x):
         #x.shape=(batch,seq_len,feature_in)--> expert_weight=(batch,seq_len,experts)
         expert_weights=self.gate(x)
+        expert_weight = torch.softmax(expert_weight, dim=-1)
+        moe_out=[expert(x).unsqueeze(-2) for expert in self.experts]
+        moe_out=torch.cat(moe_out,dim=-2)
+        expert_weight = expert_weight.unsqueeze(-2)
+        output = expert_weight @ moe_out 
+        return output.squeeze()
+        
         
