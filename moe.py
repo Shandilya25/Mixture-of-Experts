@@ -52,5 +52,36 @@ class SparseMOERouter(nn.Module):
             selected_experts, num_classes=self.expert_number
         )
         expert_mask = expert_mask.permute(2, 1, 0) 
-        return router_logits, router_weights, selected_experts, expert_mask, expert_mask
+        return router_logits, router_weights, selected_experts, expert_mask
+        
+class SparseMoEConfig:
+    def __init__(self,experts,top_k,hidden_dim,embedding_dim,shared_expert=None,shared_expert_num=None):
+        self.experts=experts
+        self.top_k=top_k
+        self.hidden_dim=hidden_dim
+        self.embedding_dim=embedding_dim
+        self.shared_expert=shared_expert
+        self.shared_expert_num=shared_expert_num
+        
+
+class SparseMOE(nn.Module):
+    
+    def __init__(self,config):
+        super().__init__()
+        self.embedding_dim=config.embedding_dim
+        self.hidden_dim=config.hidden_dim
+        self.expert_num=config.experts
+        self.top_k=config.top_k
+        self.experts=nn.ModuleList(
+            [
+                MOE_Expert(self.embedding_dim,self.hidden_dim) for _ in range(self.expert_num)
+            ]
+        )
+
+        self.router=SparseMOERouter(self.embedding_dim,self.expert_num,self.top_k)
+        
+    def forward(self,x):
+        batch,seq_len,e_size=x.size()
+        router_logits, router_weights, selected_experts, expert_mask,=self.router(x)
+        
         
