@@ -84,4 +84,10 @@ class SparseMOE(nn.Module):
         batch,seq_len,e_size=x.size()
         router_logits, router_weights, selected_experts, expert_mask,=self.router(x)
         
+        final_embedding_dim=torch.zeros((batch,seq_len,e_size),dtype=e_size.dtype,device=e_size.device)
+        
+        for index in range(self.expert_num):
+            expert_network=self.experts[index]
+            idx, top_x = torch.where(expert_mask[index])
+        
         
