@@ -45,5 +45,12 @@ class SparseMOERouter(nn.Module):
     def forward(self,x):
         router_logits=self.gate(x)
         router_prob=F.Softmax(router_logits,dim=-1,dtype=torch.float)
-        router_weights=torch.topk(router_prob,self.top_k,dim=-1)
+        router_weights,selected_experts=torch.topk(router_prob,self.top_k,dim=-1)
+
+        router_weights=router_weights/router_weights.sum(dim=-1,keepdim=True)
+        expert_mask = F.one_hot(
+            selected_experts, num_classes=self.expert_number
+        )
+        expert_mask = expert_mask.permute(2, 1, 0) 
+        return router_logits, router_weights, selected_experts, expert_mask, expert_mask
         
