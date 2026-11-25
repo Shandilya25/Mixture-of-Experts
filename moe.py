@@ -80,14 +80,26 @@ class SparseMOE(nn.Module):
 
         self.router=SparseMOERouter(self.embedding_dim,self.expert_num,self.top_k)
         
-    def forward(self,x):
-        batch,seq_len,e_size=x.size()
-        router_logits, router_weights, selected_experts, expert_mask,=self.router(x)
-        
-        final_embedding_dim=torch.zeros((batch,seq_len,e_size),dtype=e_size.dtype,device=e_size.device)
-        
-        for index in range(self.expert_num):
-            expert_network=self.experts[index]
-            idx, top_x = torch.where(expert_mask[index])
-        
+def forward(self, x):
+    batch, seq_len, e_size = x.size()
+    x_flat = x.view(-1, e_size)                                         # (T, E)
+
+    router_logits, router_weights, selected_experts, expert_mask = self.router(x_flat)
+
+    final_output = torch.zeros((batch * seq_len, e_size), dtype=x.dtype, device=x.device)
+
+    for index in range(self.expert_num):
+        expert_network = self.experts[index]
+        idx, top_x = torch.where(expert_mask[index])                    # slot, token
+
+        if top_x.numel() == 0:
+            continue
+
+        current_tokens = x_flat[top_x]                                  # (n_i, E)
+        expert_out = expert_network(current_tokens)                     # (n_i, E)
+        expert_out = expert_out * router_weights[top_x, idx].unsqueeze(-1)
+
+        final_output.index_add_(0, top_x, expert_out.to(x.dtype))
+
+    return final_output.view(batch, seq_len, e_size), router_logits
         
